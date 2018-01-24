@@ -20,11 +20,6 @@ engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'],
 session_factory = sessionmaker(bind=engine)
 session = scoped_session(session_factory)
 
-@click.command()
-def initdb():
-    Base.metadata.create_all(engine)
-    click.echo('Initialized the database')
-
 admin = Admin(app, name='racings', template_mode='bootstrap3')
 admin.add_view(ModelView(domain.Body, session))
 admin.add_view(ModelView(domain.DriversLic, session))
@@ -40,5 +35,20 @@ admin.add_view(ModelView(domain.Picture, session))
 def index():
     return '<a href="/admin/">Click me to get to Admin!</a>'
 
+@click.group()
+def cli():
+    pass
+
+@cli.command()
+def initdb():
+    Base.metadata.create_all(engine)
+    click.echo('Initialized the database')
+
+
+@cli.command()
+@click.option('--debug', is_flag=True)
+def admin(debug=False):
+    app.run(debug=debug)
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    cli()
