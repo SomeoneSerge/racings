@@ -25,9 +25,7 @@ admin.add_view(ModelView(domain.Body, session))
 admin.add_view(ModelView(domain.DriversLic, session))
 admin.add_view(ModelView(domain.ScrutLic, session))
 admin.add_view(ModelView(domain.User, session))
-admin.add_view(ModelView(domain.Homologation, session))
-admin.add_view(ModelView(domain.Manufacturer, session))
-admin.add_view(ModelView(domain.CarPassport, session))
+admin.add_view(ModelView(domain.Automobile, session))
 admin.add_view(ModelView(domain.Picture, session))
 
 # Flask views
