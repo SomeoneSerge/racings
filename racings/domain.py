@@ -4,17 +4,11 @@ from sqlalchemy import (BLOB, Column, DateTime, ForeignKey, Integer, String,
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
 from sqlalchemy.orm import relationship
 
-Base = declarative_base()
+from racings.db import Base, BaseModel
+from racings.auth import UserBase
 
 #   Quite nasty hack. Will get fixed once I get rid of SQLAlchemy
 EXPOSED = dict()
-
-
-class BaseModel(Base):
-    __abstract__ = True
-    _created = Column(DateTime, default=func.now())
-    _updated = Column(DateTime, default=func.now(), onupdate=func.now())
-    _etag = Column(String(40))
 
 
 class ArtificialId(Base):
@@ -71,11 +65,14 @@ class Body(BaseModel, ArtificialId):
     address = Column(Text)
 
 
-class User(BaseModel):
+class User(BaseModel, UserBase):
     __tablename__ = 'user'
     id = Column(Integer, ForeignKey('body.id'), primary_key=True)
     login = Column(String(128))
     pw = Column(String(128))
+    # roles = relationship('Role' backref='users')
+
+    
 EXPOSED['users'] = User
 
 
