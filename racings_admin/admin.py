@@ -21,12 +21,8 @@ session_factory = sessionmaker(bind=engine)
 session = scoped_session(session_factory)
 
 admin = Admin(app, name='racings', template_mode='bootstrap3')
-admin.add_view(ModelView(domain.Body, session))
-admin.add_view(ModelView(domain.DriversLic, session))
-admin.add_view(ModelView(domain.ScrutLic, session))
-admin.add_view(ModelView(domain.User, session))
-admin.add_view(ModelView(domain.Automobile, session))
-admin.add_view(ModelView(domain.Picture, session))
+for v in domain.EXPOSED.values():
+    admin.add_view(ModelView(v, session))
 
 # Flask views
 @app.route('/')
@@ -41,6 +37,19 @@ def cli():
 def initdb():
     Base.metadata.create_all(engine)
     click.echo('Initialized the database')
+
+@cli.command()
+def filldb():
+    root_body = domain.Body(
+        id=1,
+        name='Superuser',
+        phone='+11234567890',
+        email='root@racings.local')
+    root_user = domain.User(id=root_body.id, login='root', pw='qwerty')
+    root_driver = domain.ScrutLic(licensee=root_body.id, issuer=root_body.id,)
+    session.add_all([root_body, root_user, root_driver])
+    session.commit()
+
 
 
 @cli.command()

@@ -63,6 +63,7 @@ class Body(BaseModel, ArtificialId):
     phone = Column(String(11) )
     email = Column(String(256))
     address = Column(Text)
+EXPOSED['bodies'] = Body
 
 
 class User(BaseModel, UserBase):
@@ -70,7 +71,6 @@ class User(BaseModel, UserBase):
     id = Column(Integer, ForeignKey('body.id'), primary_key=True)
     login = Column(String(128))
     pw = Column(String(128))
-    # roles = relationship('Role' backref='users')
 
     
 EXPOSED['users'] = User
@@ -180,7 +180,8 @@ class Lap(BaseModel, TimeSpanning, ArtificialId):
 EXPOSED['laps'] = Lap
 
 
-# @signed_by('scrutineer')
-# class Inspection(BaseModel):
-#     __tablename__ = 'inspection'
-#     id = Column(Integer, primary_key=True)
+@signed_by('scrutineer')
+class Inspection(BaseModel):
+    __tablename__ = 'inspection'
+    id = Column(Integer, primary_key=True)
+

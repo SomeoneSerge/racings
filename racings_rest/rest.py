@@ -2,7 +2,12 @@ from eve import Eve
 from eve_sqlalchemy import SQL
 from eve_sqlalchemy.validation import ValidatorSQL
 from eve.auth import TokenAuth as _TokenAuth
+import json
+import base64
 
+from flask import request, jsonify
+from werkzeug.exceptions import Unauthorized
+from racings.domain import User
 from racings import domain
 
 
@@ -16,7 +21,30 @@ class TokenAuth(_TokenAuth):
             return False
 
 
+
+def register_views(app):
+
+    @app.route('/login', methods=['POST'])
+    def login(**kwargs):
+        """Simple login view that expect to have username
+        and pw in the request POST. If the username and
+        pw matches - token is being generated and return.
+        """
+        data = request.get_json()
+        login = data.get('username')
+        pw = data.get('pw')
+
+        if not login or not pw:
+            raise Unauthorized('Provide username and pw.')
+        else:
+            user = app.data.driver.session.query(User).get(login)
+            if user and user.check_pw(pw):
+                token = user.generate_auth_token()
+                return jsonify({'token': token.decode('ascii')})
+        raise Unauthorized('Wrong username and/or pw.')
+
 app = Eve(validator=ValidatorSQL, data=SQL)
+register_views(app)
 
 db = app.data.driver
 domain.Base.metadata.bind = db.engine

@@ -7,11 +7,12 @@ from itsdangerous import TimedJSONWebSignatureSerializer \
 from itsdangerous import SignatureExpired, BadSignature
 from sqlalchemy.orm import validates
 
-from racings.db import BaseModel
+from racings.db import Base
 
 
 #From: https://eve-sqlalchemy.readthedocs.io/en/latest/tutorial.html#authentication-example
-class UserBase:
+class UserBase(Base):
+    __abstract__ = True
 
 
     def generate_auth_token(self, expiration=24*60*60):
@@ -42,24 +43,24 @@ class UserBase:
         return len(allowed_roles) > 0
 
     def generate_salt(self):
-        return ''.join(random.sample(string.letters, 12))
+        return ''.join(random.sample(string.ascii_letters, 12))
 
-    def encrypt(self, password):
-        """Encrypt password using hashlib and current salt.
+    def encrypt(self, pw):
+        """Encrypt pw using hashlib and current salt.
         """
-        return str(hashlib.sha1(password + str(self.salt))\
+        return str(hashlib.sha1((pw + str(self.salt)).encode('ascii'))\
             .hexdigest())
 
-    @validates('password')
-    def _set_password(self, key, value):
+    @validates('pw')
+    def _set_pw(self, key, value):
         """Using SQLAlchemy validation makes sure each
-        time password is changed it will get encrypted
+        time pw is changed it will get encrypted
         before flushing to db.
         """
         self.salt = self.generate_salt()
         return self.encrypt(value)
 
-    def check_password(self, password):
-        if not self.password:
+    def check_pw(self, pw):
+        if not self.pw:
             return False
-        return self.encrypt(password) == self.password
+        return self.encrypt(pw) == self.pw
