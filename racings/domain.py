@@ -72,7 +72,7 @@ class User(BaseModel, UserBase):
     login = Column(String(128))
     pw = Column(String(128))
 
-    
+
 EXPOSED['users'] = User
 
 
@@ -109,12 +109,6 @@ class Picture(BaseModel, ArtificialId):
 EXPOSED['pics'] = Picture
 
 
-class Make(BaseModel, ArtificialId):
-    __tablename__ = 'make'
-    name = Column(Text)
-EXPOSED['makes'] = Make
-
-
 class WheelDrive(BaseModel, ArtificialId):
     __tablename__ = 'wheeldrive'
     name = Column(Text, unique=True)
@@ -132,7 +126,7 @@ class Automobile(BaseModel, ArtificialId):
     __tablename__ = 'automobile'
     code = Column(Text, unique=True)
     valid_until = Column(DateTime)
-    make = Column(Integer, ForeignKey('make.id'))
+    make = Column(Text)
     chassis = Column(Text)
     engine = Column(Text)
     engine_year = Column(Integer)
@@ -170,7 +164,7 @@ class Competition(BaseModel, ArtificialId, TimeSpanning):
 EXPOSED['competitions'] = Competition
 
 
-# Nasty hack: python-eve allows only single pk so hence an artificial
+# Nasty hack: python-eve allows only single pk hence an artificial
 class Lap(BaseModel, TimeSpanning, ArtificialId):
     __tablename__ = 'lap'
     competition = Column(Integer,
