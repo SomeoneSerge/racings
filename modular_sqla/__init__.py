@@ -1,6 +1,9 @@
 import sqlalchemy as sa
+from sqlalchemy.ext.declarative import declarative_base
+import attr
 
 
+@attr.s
 class Domain:
     """This class is a place to specify all the project-level
     conventions on how to compose data models.
@@ -22,11 +25,11 @@ class Domain:
     This method shall generate new sqla.orm classes
     inheriting from `domain.Base`"""
 
-    def __init__(self):
-        self.PK_TYPE = sa.Integer
-        self.PK = dict()
-        self.models = dict()
-        self.Base = sa.orm.declarative_base()
+    PK_TYPE = attr.ib(default=sa.Integer)
+    PK = attr.ib(default=attr.Factory(dict))
+    Numeric = attr.ib(default=attr.Factory(lambda: sa.Numeric(10, 4)))
+    models = attr.ib(default=attr.Factory(dict))
+    Base = attr.ib(default=attr.Factory(declarative_base))
 
     def __getattr__(self, attr):
         try:
