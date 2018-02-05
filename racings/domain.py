@@ -22,19 +22,21 @@ class TimeSpanning(Base):
     until = Column(DateTime)
 
 
-# Based on: http://taketwoprogramming.blogspot.com/2009/08/reusable-sqlalchemy-models.html
+# Based on:
+# http://taketwoprogramming.blogspot.com/2009/08/reusable-sqlalchemy-models.html
 def build_homologation(homologatable, column='homologation'):
-    metadata = Base.metadata
     h_class_name = homologatable.capitalize() + column.capitalize()
     h_table_name = homologatable + '_' + column
     h_class = type(h_class_name, (BaseModel,),
                    dict(__tablename__=h_table_name,
                         id=Column(Integer, primary_key=True),
                         code=Column(Text, unique=True),
-                        federation=Column(Text), # Consider maintaining a set of those valid
+                        # Consider maintaining a set of those valid
+                        federation=Column(Text),
                         valid_thru=Column(DateTime)))
     EXPOSED[h_table_name] = h_class
     return Column(Integer, ForeignKey(h_table_name + '.id'))
+
 
 def has_owner(column='owner'):
     def _has_owner(clz):
@@ -43,13 +45,16 @@ def has_owner(column='owner'):
         return clz
     return _has_owner
 
+
 def signed_by(signer_table,
               column_issuer='issuer',
               column_issued='issued'):
     def _signed(clz):
         # The issuer
         setattr(clz, column_issuer,
-                Column(Integer, ForeignKey(signer_table + '.id'), nullable=False))
+                Column(Integer,
+                       ForeignKey(signer_table + '.id'),
+                       nullable=False))
         # The date the document was issued
         setattr(clz, column_issued,
                 Column(DateTime, nullable=False))
@@ -59,8 +64,8 @@ def signed_by(signer_table,
 
 class Body(BaseModel, ArtificialId):
     __tablename__ = 'body'
-    name =  Column(String(256))
-    phone = Column(String(11) )
+    name = Column(String(256))
+    phone = Column(String(11))
     email = Column(String(256))
     address = Column(Text)
 EXPOSED['bodies'] = Body
@@ -81,11 +86,14 @@ class Part(BaseModel, ArtificialId):
     name = Column(Text)
 EXPOSED['parts'] = Part
 
+
 class LicenseBase(BaseModel, ArtificialId):
     __abstract__ = True
+
     @declared_attr
     def licensee(cls):
         return Column(Integer, ForeignKey('body.id'))
+
     @declared_attr
     def issuer(cls):
         return Column(Integer, ForeignKey('body.id'))
