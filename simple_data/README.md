@@ -1,4 +1,4 @@
-# simple_bureaucracy
+# simple_data
 
 An attempt to model the document management.
 That includes managing data, IO and UI generation.
