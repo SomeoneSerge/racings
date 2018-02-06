@@ -40,7 +40,7 @@ def add_models(domain):
                     Column('name', Text))
     doc = Table('doc', meta, *domain.common_columns(),
                 Column('id', domain.PK_TYPE, primary_key=True, unique=True),
-                Column('name', Text, unique=True, nullable=False),
+                Column('name', Text, nullable=False),
                 Column('doctype_id', domain.PK_TYPE, ForeignKey('doctype.id')),
                 Column('issuer_id', domain.PK_TYPE, ForeignKey('person.id')))
 
@@ -48,7 +48,7 @@ def add_models(domain):
         return (
             *domain.common_columns(),
             Column('id', domain.PK_TYPE, primary_key=True, unique=True),
-            Column('name', Text, unique=True, nullable=False),
+            Column('name', Text, nullable=False),
             Column(
                 'doctype_id',
                 domain.PK_TYPE,

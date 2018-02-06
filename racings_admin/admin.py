@@ -52,17 +52,21 @@ def filldb():
         address='Nonexistence')
     scrutineers = DOMAIN.DocType(
         name='Scrutineer\'s License',
-        person_vars=[
+        person_variables=[
             DOMAIN.PersonVar(name='holder'),
             DOMAIN.PersonVar(name='issuer')
         ])
     drivers = DOMAIN.DocType(
         name='Driver\'s License',
-        person_vars=[
+        person_variables=[
             DOMAIN.PersonVar(name='holder'),
             DOMAIN.PersonVar(name='issuer')
         ])
-    session.add_all([superuser, scrutineers, drivers])
+    homologations = DOMAIN.DocType(
+        name='homologation',)
+    homologations = DOMAIN.DocType(
+        name='Seal',)
+    session.add_all([superuser, scrutineers, drivers, homologations])
     session.commit()
 
 
