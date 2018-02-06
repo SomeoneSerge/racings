@@ -1,11 +1,12 @@
-from sqlalchemy import Column, String, Text, ForeignKey, select
+from sqlalchemy import Column, String, Text, ForeignKey, Table, join
 from sqlalchemy.orm import relationship, column_property
-from sqlalchemy.ext.declarative import declared_attr
 
 
 def add_models(domain):
     """add_models(simple_data.Domain)
     Adds"""
+
+    meta = domain.Base.metadata
 
     class Person(domain.Base):
         """Person data model (includes legal bodies)"""
@@ -16,104 +17,99 @@ def add_models(domain):
         email = Column(Text)
         address = Column(Text)
 
+    doctype = Table('doctype', meta,
+                    Column('id', domain.PK_TYPE, primary_key=True),
+                    Column('name', Text))
+    doc = Table('doc', meta,
+                Column('id', domain.PK_TYPE, primary_key=True),
+                Column('name', Text, unique=True),
+                Column('doctype_id', domain.PK_TYPE,
+                       ForeignKey('doctype.id')),
+                Column('issuer_id', domain.PK_TYPE,
+                       ForeignKey('person.id')))
+
+    def var_columns():
+        return (
+            Column('id', domain.PK_TYPE, primary_key=True),
+            Column('name', Text, nullable=False),
+            Column('doctype_id', domain.PK_TYPE,
+                   ForeignKey('doctype.id')),
+        )
+    numvar = Table('numvar', meta,
+                   *var_columns(),)
+    refvar = Table('refvar', meta,
+                   *var_columns(),
+                   Column('reftype_id', domain.PK_TYPE,
+                          ForeignKey('doctype.id'),))
+
+    def rec_columns(vartype_id):
+        return (
+            Column('var_id', domain.PK_TYPE,
+                   ForeignKey(vartype_id),
+                   primary_key=True),
+            Column('doc_id', domain.PK_TYPE,
+                   ForeignKey('doc.id'),
+                   primary_key=True)
+        )
+    numrec = Table('numrec', meta,
+                   *rec_columns('numvar.id'),
+                   Column('value', domain.Numeric,
+                          nullable=False))
+    refrec = Table('refrec', meta,
+                   *rec_columns('refvar.id'),
+                   Column('ref_id', domain.PK_TYPE,
+                          ForeignKey('doc.id')))
+    numerical_records = join(numvar, numrec)
+    referential_records = join(refvar, refrec)
+    # referential_records = (
+    #     select([referential_records, doc.c.name])
+    #     .select_from(join(referential_records, doc,
+    #                       refrec.c.ref_id == doc.c.id))
+    #     .alias()
+    # )
+
     class DocType(domain.Base):
-        __tablename__ = 'doctype'
-        id = Column(domain.PK_TYPE, primary_key=True)
-        name = Column(Text)
+        __table__ = doctype
         instances = relationship('Doc', back_populates='doctype')
 
     class Doc(domain.Base):
-        __tablename__ = 'doc'
-        id = Column(domain.PK_TYPE, primary_key=True)
-        doctype_id = Column('type', domain.PK_TYPE,
-                            ForeignKey('doctype.id'))
+        __table__ = doc
         doctype = relationship('DocType', uselist=False,
                                back_populates='instances',
-                               foreign_keys=[doctype_id])
-        issuer_id = Column('issuer', domain.PK_TYPE)
+                               foreign_keys='doctype_id')
         issuer = relationship('Person', uselist=False,
-                              foreign_keys=[issuer_id])
+                              foreign_keys='issuer_id')
 
-    class DocVar(domain.Base):
-        __tablename__ = 'docvar'
-        id = Column(domain.PK_TYPE, primary_key=True)
-        name = Column(Text)
-        doctype_id = Column('doctype',
-                            domain.PK_TYPE,
-                            ForeignKey('doctype.id'))
-        doctype = relationship('DocType',
-                               uselist=False,
-                               foreign_keys=[doctype_id])
-        kind = Column(String(50))
-
-        @declared_attr
-        def __mapper_args__(cls):
-            args = {'polymorphic_identity': cls.__tablename__}
-            if cls.__tablename__ == 'docvar':
-                args['polymorphic_on'] = cls.kind
-            return args
-
-    class ReferentialVar(DocVar):
-        __tablename__ = 'refvar'
-        id = Column(domain.PK_TYPE,
-                    ForeignKey('docvar.id'),
-                    primary_key=True)
-        reftype_id = Column('reftype',
-                            domain.PK_TYPE,
-                            ForeignKey('doctype.id'))
+    class ReferentialVar(domain.Base):
+        __table__ = refvar
         reftype = relationship('DocType', uselist=False,
-                               foreign_keys=[reftype_id],)
+                               foreign_keys='reftype_id',)
+        records = relationship('RefRec', back_populates='var')
 
-    class NumericVar(DocVar):
-        __tablename__ = 'numvar'
-        id = Column(domain.PK_TYPE,
-                    ForeignKey('docvar.id'),
-                    primary_key=True)
-        value = Column('value', domain.Numeric)
+    class NumericVar(domain.Base):
+        __table__ = numvar
+        records = relationship('NumRec', back_populates='var')
 
-    class DocRec(domain.Base):
-        __tablename__ = 'docrec'
-        id = Column(domain.PK_TYPE,
-                    ForeignKey('DocVar.id'),
-                    primary_key=True)
-        doc_id = Column('doc', domain.PK_TYPE,
-                        ForeignKey('Doc.id'),
-                        primary_key=True)
-        doc = relationship('Doc', back_populates='records',
-                           uselist=False,
-                           foreign_keys=[doc_id])
-        var = relationship('DocVar', uselist=False, foreign_keys=[id])
+    class RefRec(domain.Base):
+        __table__ = referential_records
+        var_id = column_property(refrec.c.var_id, refvar.c.id)
+        var = relationship('ReferentialVar', uselist=False,
+                           foreign_keys='var_id',
+                           back_populates='records')
+        value = relationship('Doc', uselist=False, foreign_keys='ref_id')
 
-        @declared_attr
-        def __mapper_args__(cls):
-            args = {'polymorphic_identity': cls.__tablename__}
-            if cls.__tablename__ == 'docrec':
-                args['polymorphic_on'] = column_property(
-                    select([DocVar.kind], DocVar.id == id))
-            return args
-
-    class RefRec(DocRec):
-        __tablename__ = 'refrec'
-        id = Column(domain.PK_TYPE,
-                    ForeignKey('docrec.id'),
-                    primary_key=True)
-        doc_id = Column('doc', domain.PK_TYPE,
-                        ForeignKey('docrec.id'),
-                        primary_key=True)
-        ref_id = Column('ref', domain.PK_TYPE,
-                        ForeignKey('doc.id'))
-        ref = relationship('Doc', uselist=False, foreign_keys=['ref_id'])
-
-    class NumRec(DocRec):
-        __tablename__ = 'numrec'
-        value = Column(domain.Numeric)
+    class NumRec(domain.Base):
+        __table__ = numerical_records
+        var_id = column_property(numrec.c.var_id, numvar.c.id)
+        var = relationship('NumericVar', uselist=False,
+                           foreign_keys='var_id',
+                           back_populates='records')
 
     domain.add_model('Person', Person, Person.id)
     domain.add_model('Doc', Doc, Doc.id)
     domain.add_model('DocType', DocType, DocType.id)
-    domain.add_model('DocVar', DocVar, DocVar.id)
     domain.add_model('RefVar', ReferentialVar, ReferentialVar.id)
     domain.add_model('NumVar', NumericVar, NumericVar.id)
-    domain.add_model('RefRec', RefRec, (RefRec.id, RefRec.doc_id))
-    domain.add_model('NumRec', NumRec, NumRec.id)
+    domain.add_model('RefRec', RefRec, (RefRec.var_id, RefRec.doc_id))
+    domain.add_model('NumRec', NumRec, (NumRec.var_id, NumRec.doc_id))
     return domain
