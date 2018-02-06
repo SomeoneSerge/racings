@@ -9,16 +9,13 @@ import click
 from racings import model
 from racings.model import DOMAIN
 
-
 app = Flask(__name__)
 app.config['SECRET_KEY'] = str(random.randint(10**5, 10**10))
 app.config['DATABASE_FILE'] = 'racings.db'
 app.config['SQLALCHEMY_DATABASE_URI'] = (
-    'sqlite:///' + app.config['DATABASE_FILE']
-)
+    'sqlite:///' + app.config['DATABASE_FILE'])
 
-engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'],
-                       echo=True)
+engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'], echo=True)
 session_factory = sessionmaker(bind=engine)
 session = scoped_session(session_factory)
 
@@ -47,22 +44,33 @@ def initdb():
 
 @cli.command()
 def filldb():
-    # root_body = domain.Body(
-    #     id=1,
-    #     name='Superuser',
-    #     phone='+11234567890',
-    #     email='root@racings.local')
-    # root_user = domain.User(id=root_body.id, login='root', pw='qwerty')
-    # root_driver = domain.ScrutLic(licensee=root_body.id, issuer=root_body.id,)
-    # session.add_all([root_body, root_user, root_driver])
+    DOMAIN.Base.metadata.create_all(engine)
+    superuser = DOMAIN.Person(
+        name='Noone',
+        phone='1000000000',
+        email='noone@nowhere.me',
+        address='Nonexistence')
+    scrutineers = DOMAIN.DocType(
+        name='Scrutineer\'s License',
+        person_vars=[
+            DOMAIN.PersonVar(name='holder'),
+            DOMAIN.PersonVar(name='issuer')
+        ])
+    drivers = DOMAIN.DocType(
+        name='Driver\'s License',
+        person_vars=[
+            DOMAIN.PersonVar(name='holder'),
+            DOMAIN.PersonVar(name='issuer')
+        ])
+    session.add_all([superuser, scrutineers, drivers])
     session.commit()
-
 
 
 @cli.command()
 @click.option('--debug', is_flag=True)
 def admin(debug=False):
     app.run(debug=debug)
+
 
 if __name__ == '__main__':
     cli()
