@@ -27,3 +27,43 @@ layer. E.g. we could use `eve` (see package `racings_rest`).
 With REST end points we can build a frontend using some sodding js framework and
 serve it as static content --- a perfect isolation between model layer and
 presentation layer.
+
+## Modeling the data before modeling using data
+
+Idealistically, we'd like to achieve the following behavior of our application:
+we describe the data in one way or another, then we generate endpoints for them,
+and in the end the frontend retrieves plain datastructure and figures out a way
+to display to user. We'd want to manually build only a few reusable UI
+components and the resulting presentation shall be generated.
+
+Had we managed to do that I'd know we've got a clean, easily maintainable
+system. The chances also are the generated presentation would have much better
+looks than manually composed one. You know, that's how LaTeX's superior to Word.
+
+
+## Current implementation
+
+At the moment I've basically described a document-model in terms of SQLA which
+is sort of silly as I could've had the same results out of the box with some
+Mongo. Nevertheless I've got some model to get started with and to put `eve`
+and `flask-admin` on.
+
+In the process I had to solve the problem of SQLA being designed sort of
+aggressive in terms of dependencies. The usual workflow is to put to
+some shared package's `globals()` either a `metadata` or a `declarative_base()`
+instance. Then every package that's meant to extend the model shall statically
+import this shared object and use for new definitions.
+So of course a normal person would prefer to write factory methods instead of
+static coupling. That requires us to establish some conventions.
+All these conventions are expressed in the module `modular_sqla.model`
+
+## Further steps
+
+I didn't come to the document-model (or EVA-pattern if you wish) in an instant.
+The original intention was to automate generation of the SQLA schema. That'd
+look like an app (a domain model) statically composed of several independent
+reusable components. Such a tool would also have all the data needed to automate
+the presentation generation. It'd be a much more consistent system.
+Sounds glorius, doesn't it? Why didn't I take this path since the begining then?
+Aye, here's the rub. This schema-generation shall be robust and reproducible and
+we'll have to deal with migrations. This need thorough thinking.
