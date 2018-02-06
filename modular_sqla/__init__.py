@@ -1,3 +1,4 @@
+import importlib
 import sqlalchemy as sa
 from sqlalchemy.ext.declarative import declarative_base
 import attr
@@ -47,3 +48,6 @@ class Domain:
                             .format(name))
         self.models[name] = model
         self.PK[name] = pk
+
+    def use_package(self, package):
+        importlib.import_module('{}.model'.format(package)).add_models(self)

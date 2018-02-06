@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Text, ForeignKey, Table, join
+from sqlalchemy import Column, String, Text, ForeignKey, Table, join, PrimaryKeyConstraint
 from sqlalchemy.orm import relationship, column_property
 
 
@@ -11,17 +11,18 @@ def add_models(domain):
     class Person(domain.Base):
         """Person data model (includes legal bodies)"""
         __tablename__ = 'person'
-        id = Column(domain.PK_TYPE, primary_key=True)
+        id = Column(domain.PK_TYPE, primary_key=True, unique=True)
         name = Column(Text)
         phone = Column(String(15))
         email = Column(Text)
         address = Column(Text)
 
     doctype = Table('doctype', meta,
-                    Column('id', domain.PK_TYPE, primary_key=True),
+                    Column('id', domain.PK_TYPE,
+                           primary_key=True, unique=True),
                     Column('name', Text))
     doc = Table('doc', meta,
-                Column('id', domain.PK_TYPE, primary_key=True),
+                Column('id', domain.PK_TYPE, primary_key=True, unique=True),
                 Column('name', Text, unique=True),
                 Column('doctype_id', domain.PK_TYPE,
                        ForeignKey('doctype.id')),
@@ -30,7 +31,7 @@ def add_models(domain):
 
     def var_columns():
         return (
-            Column('id', domain.PK_TYPE, primary_key=True),
+            Column('id', domain.PK_TYPE, primary_key=True, unique=True),
             Column('name', Text, nullable=False),
             Column('doctype_id', domain.PK_TYPE,
                    ForeignKey('doctype.id')),
@@ -44,12 +45,13 @@ def add_models(domain):
 
     def rec_columns(vartype_id):
         return (
+            # adding an artificial id because of Eve
+            Column('id', domain.PK_TYPE, unique=True),
+            PrimaryKeyConstraint('id'),
             Column('var_id', domain.PK_TYPE,
-                   ForeignKey(vartype_id),
-                   primary_key=True),
+                   ForeignKey(vartype_id),),
             Column('doc_id', domain.PK_TYPE,
-                   ForeignKey('doc.id'),
-                   primary_key=True)
+                   ForeignKey('doc.id'),)
         )
     numrec = Table('numrec', meta,
                    *rec_columns('numvar.id'),
@@ -76,40 +78,47 @@ def add_models(domain):
         __table__ = doc
         doctype = relationship('DocType', uselist=False,
                                back_populates='instances',
-                               foreign_keys='doctype_id')
+                               foreign_keys=[doc.c.doctype_id])
         issuer = relationship('Person', uselist=False,
-                              foreign_keys='issuer_id')
+                              foreign_keys=[doc.c.issuer_id])
 
     class ReferentialVar(domain.Base):
         __table__ = refvar
         reftype = relationship('DocType', uselist=False,
-                               foreign_keys='reftype_id',)
+                               foreign_keys=[refvar.c.reftype_id])
         records = relationship('RefRec', back_populates='var')
-
-    class NumericVar(domain.Base):
-        __table__ = numvar
-        records = relationship('NumRec', back_populates='var')
 
     class RefRec(domain.Base):
         __table__ = referential_records
         var_id = column_property(refrec.c.var_id, refvar.c.id)
         var = relationship('ReferentialVar', uselist=False,
-                           foreign_keys='var_id',
+                           foreign_keys=[refrec.c.var_id],
                            back_populates='records')
-        value = relationship('Doc', uselist=False, foreign_keys='ref_id')
+        value = relationship('Doc', uselist=False,
+                             foreign_keys=[refrec.c.ref_id])
+        __mapper_args__ = {
+            'primary_key': [refrec.c.id]
+        }
+
+    class NumericVar(domain.Base):
+        __table__ = numvar
+        records = relationship('NumRec', back_populates='var')
 
     class NumRec(domain.Base):
         __table__ = numerical_records
         var_id = column_property(numrec.c.var_id, numvar.c.id)
         var = relationship('NumericVar', uselist=False,
-                           foreign_keys='var_id',
+                           foreign_keys=[numrec.c.var_id],
                            back_populates='records')
+        __mapper_args__ = {
+            'primary_key': [numrec.c.id]
+        }
 
     domain.add_model('Person', Person, Person.id)
     domain.add_model('Doc', Doc, Doc.id)
     domain.add_model('DocType', DocType, DocType.id)
     domain.add_model('RefVar', ReferentialVar, ReferentialVar.id)
+    domain.add_model('RefRec', RefRec, RefRec.id)
     domain.add_model('NumVar', NumericVar, NumericVar.id)
-    domain.add_model('RefRec', RefRec, (RefRec.var_id, RefRec.doc_id))
-    domain.add_model('NumRec', NumRec, (NumRec.var_id, NumRec.doc_id))
+    domain.add_model('NumRec', NumRec, NumRec.id)
     return domain
