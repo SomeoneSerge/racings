@@ -77,15 +77,6 @@ def add_models(domain):
                    Column('value', domain.Numeric, nullable=False))
     refrec = Table('refrec', meta, *rec_columns('refvar.id'),
                    Column('ref_id', domain.PK_TYPE, ForeignKey('doc.id')))
-    numerical_records = join(numvar, numrec)
-    referential_records = join(refvar, refrec)
-
-    # referential_records = (
-    #     select([referential_records, doc.c.name])
-    #     .select_from(join(referential_records, doc,
-    #                       refrec.c.ref_id == doc.c.id))
-    #     .alias()
-    # )
 
     class DocType(domain.Base, StrMixin):
         __table__ = doctype
@@ -109,15 +100,15 @@ def add_models(domain):
         __table__ = refvar
         valuetype = relationship(
             'DocType', uselist=False, foreign_keys=[refvar.c.valuetype_id])
-        # records = relationship('RefRec', back_populates='var')
+        doctype = relationship('DocType', uselist=False,
+                               foreign_keys=[refvar.c.doctype_id])
 
     class RefRec(domain.Base, StrMixin):
-        __table__ = referential_records
+        __table__ = refrec
         var_id = column_property(refrec.c.var_id, refvar.c.id)
         var = relationship(
             'RefVar',
             uselist=False,
-            # back_populates='records',
             foreign_keys=[refrec.c.var_id],
         )
         doc = relationship(
@@ -131,15 +122,15 @@ def add_models(domain):
 
     class NumVar(domain.Base, StrMixin):
         __table__ = numvar
-        # records = relationship('NumRec', back_populates='var')
+        doctype = relationship('DocType', uselist=False,
+                               foreign_keys=[numvar.c.doctype_id])
 
     class NumRec(domain.Base, StrMixin):
-        __table__ = numerical_records
+        __table__ = numrec
         var_id = column_property(numrec.c.var_id, numvar.c.id)
         var = relationship(
             'NumVar',
             uselist=False,
-            # back_populates='records',
             foreign_keys=[numrec.c.var_id],
         )
         doc = relationship(

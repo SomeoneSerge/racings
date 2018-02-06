@@ -8,3 +8,4 @@ def test_schema():
     domain = Domain()
     add_models(domain)
     domain.Base.metadata.create_all(eng)
+    domain.Person._sa_class_manager.mapper.iterate_properties
