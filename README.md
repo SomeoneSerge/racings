@@ -23,7 +23,8 @@ statically composed together in a single package (see `racings.model`).
 After that we can easily put some pre-baked interface on top of it (e.g.
 `flask-admin`). We will also do that in a separate package (cli tool:
 `racings_admin.admin`). In the same manner we'll integrate some REST/HATEOAS
-layer. E.g. we could use `eve` (see package `racings_rest`).
+layer to handle the IO (i.e. to automagically implement controllers). E.g. we
+could use `eve` (see package `racings_rest`).
 With REST end points we can build a frontend using some sodding js framework and
 serve it as static content --- a perfect isolation between model layer and
 presentation layer.
@@ -67,3 +68,18 @@ the presentation generation. It'd be a much more consistent system.
 Sounds glorius, doesn't it? Why didn't I take this path since the begining then?
 Aye, here's the rub. This schema-generation shall be robust and reproducible and
 we'll have to deal with migrations. This need thorough thinking.
+
+So the immediate future looks as follows: I've got some REST I'll begin building
+the frontend. Our document model includes some metadata about document's
+variables. Specifically, each `DocumentType` and each Variable has a `name`.
+These names will be included in the api resource and the frontend can use them
+as (CSS) class-names. This allows us not only have a generic view but also
+subsitute custom presentations up to having a very specific layout.
+
+At the same time we can begin filling in the data.
+Later on I'll probably come up with a reasonable way to compose the data model
+and then the whole up with controllers and presentation from a static
+configuration of several reusable packages.
+If (when) that comes, I'll only have to write database migration script. I'll
+still be able to supply the frontend with the very same metadata (variable
+names, etc). It's just that this data would be statically composed too.
