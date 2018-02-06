@@ -44,10 +44,14 @@ looks than manually composed one. You know, that's how LaTeX's superior to Word.
 
 ## Current implementation
 
-At the moment I've basically described a document-model in terms of SQLA which
-is sort of silly as I could've had the same results out of the box with some
-Mongo. Nevertheless I've got some model to get started with and to put `eve`
-and `flask-admin` on.
+At the moment I've basically described a document-model in terms of SQLA.
+The model resides in package `simple_bureaucracy`. It provides definitions of a
+"Person", a "DocumentType" and a "Document" instance. These three relations will
+do what a RDBMS should be doing. The rationale for this db-within-a-db is to
+make the resulting datastructures uniform, allowing them to be process in a
+generec manner. This solution is sort of silly as I could've had the same
+results out of the box with some Mongo. Nevertheless I've got some model to get
+started with and to put `eve` and `flask-admin` on.
 
 In the process I had to solve the problem of SQLA being designed sort of
 aggressive in terms of dependencies. The usual workflow is to put to
