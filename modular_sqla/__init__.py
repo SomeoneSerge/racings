@@ -31,6 +31,7 @@ class Domain:
     Numeric = attr.ib(default=attr.Factory(lambda: sa.Numeric(10, 4)))
     models = attr.ib(default=attr.Factory(dict))
     Base = attr.ib(default=attr.Factory(declarative_base))
+    common_columns = attr.ib(default=attr.Factory(list))
 
     def __getattr__(self, attr):
         try:
