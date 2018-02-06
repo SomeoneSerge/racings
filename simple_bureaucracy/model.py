@@ -1,17 +1,31 @@
 from sqlalchemy import (Column, ForeignKey, PrimaryKeyConstraint, String,
                         select, Table, Text, join)
 from sqlalchemy.orm import column_property, relationship
-from sqlalchemy.ext.declarative import declared_attr
 
 
 def add_models(domain):
     """add_models(simple_data.Domain)
     Adds"""
 
-    Base = domain.Base
+    meta = domain.Base.metadata
 
-    class IdMixin:
-        id = Column(domain.PK_TYPE, primary_key=True, unique=True)
+    person = Table(
+        'person',
+        meta,
+        *domain.common_columns(),
+        Column('id', domain.PK_TYPE, primary_key=True, unique=True),
+        Column('name', Text, nullable=False),
+        Column('phone', String(15)),
+        Column('email', Text),
+        Column('address', Text),
+    )
+
+    class Person(domain.Base):
+        """Person data model (includes legal bodies)"""
+        __table__ = person
+
+        def __str__(self):
+            return '{} <{}>'.format(self.name, self.email)
 
     class StrMixin:
         def __str__(self):
@@ -20,150 +34,181 @@ def add_models(domain):
             else:
                 return self.__name__
 
-    class Person(Base, IdMixin):
-        __tablename__ = 'person'
-        name = Column(Text, nullable=False)
-        phone = Column(String(15))
-        email = Column(Text)
-        address = Column(Text)
+    doctype = Table('doctype', meta, *domain.common_columns(),
+                    Column(
+                        'id', domain.PK_TYPE, primary_key=True, unique=True),
+                    Column('name', Text))
+    doc = Table('doc', meta, *domain.common_columns(),
+                Column('id', domain.PK_TYPE, primary_key=True, unique=True),
+                Column('name', Text, unique=True, nullable=False),
+                Column('doctype_id', domain.PK_TYPE, ForeignKey('doctype.id')),
+                Column('issuer_id', domain.PK_TYPE, ForeignKey('person.id')))
 
-        def __str__(self):
-            return '{} <{}>'.format(self.name, self.email)
+    def var_columns():
+        return (
+            *domain.common_columns(),
+            Column('id', domain.PK_TYPE, primary_key=True, unique=True),
+            Column('name', Text, unique=True, nullable=False),
+            Column(
+                'doctype_id',
+                domain.PK_TYPE,
+                ForeignKey('doctype.id'),
+                nullable=False),
+        )
 
-    class DocType(Base, IdMixin, StrMixin):
-        __tablename__ = 'doctype'
-        name = Column(Text)
+    numvar = Table('numvar', meta, *var_columns())
+    personvar = Table('personvar', meta, *var_columns())
+    refvar = Table('refvar', meta, *var_columns(),
+                   Column(
+                       'valuetype_id',
+                       domain.PK_TYPE,
+                       ForeignKey('doctype.id'),
+                   ))
 
+    def rec_columns(vartype_id):
+        return (
+            *domain.common_columns(),
+            # adding an artificial id because of Eve
+            Column('id', domain.PK_TYPE, unique=True),
+            Column(
+                'var_id',
+                domain.PK_TYPE,
+                ForeignKey(vartype_id),
+                nullable=False),
+            Column(
+                'doc_id', domain.PK_TYPE, ForeignKey('doc.id'),
+                nullable=False))
+
+    numrec = Table('numrec', meta, *rec_columns('numvar.id'),
+                   Column('value', domain.Numeric, nullable=False))
+    personrec = Table('personrec', meta, *rec_columns('personvar.id'),
+                      Column(
+                          'person_id',
+                          domain.PK_TYPE,
+                          ForeignKey('person.id'),
+                          nullable=False))
+    refrec = Table(
+        'refrec',
+        meta,
+        *rec_columns('refvar.id'),
+        Column('ref_id', domain.PK_TYPE, ForeignKey('doc.id'), nullable=False),
+    )
+    numerical_records = select([numrec, numvar.c.doctype_id]).select_from(
+        join(numvar, numrec)).alias()
+    referential_records = select([refrec, refvar.c.doctype_id]).select_from(
+        join(refvar, refrec)).alias()
+
+    # referential_records = (
+    #     select([referential_records, doc.c.name])
+    #     .select_from(join(referential_records, doc,
+    #                       refrec.c.ref_id == doc.c.id))
+    #     .alias()
+    # )
+
+    class DocType(domain.Base, StrMixin):
+        __table__ = doctype
         instances = relationship('Doc', back_populates='doctype')
-        # refvar = relationship(
-        #     'RefVar',
-        #     back_populates='doctype',)
-        # numvar = relationship(
-        #     'NumVar',
-        #     back_populates='doctype',)
-        # personvar = relationship(
-        #     'PersonVar',
-        #     back_populates='doctype',)
+        ref_variables = relationship(
+            'RefVar',
+            back_populates='doctype',
+            foreign_keys=[refvar.c.doctype_id])
+        num_variables = relationship(
+            'NumVar',
+            back_populates='doctype',
+            foreign_keys=[numvar.c.doctype_id])
+        person_variables = relationship(
+            'PersonVar',
+            back_populates='doctype',
+            foreign_keys=[personvar.c.doctype_id])
 
-    class Doc(Base, IdMixin, StrMixin):
-        __tablename__ = 'doc'
-        name = Column(Text, unique=True, nullable=False)
-        doctype_id = Column(domain.PK_TYPE, ForeignKey('doctype.id'))
-        issuer_id = Column(domain.PK_TYPE, ForeignKey('person.id'))
+    class Doc(domain.Base, StrMixin):
+        __table__ = doc
         doctype = relationship(
-            DocType,
+            'DocType',
             uselist=False,
             back_populates='instances',
-            foreign_keys=doctype_id)
+            foreign_keys=[doc.c.doctype_id])
         issuer = relationship(
-            'Person', uselist=False, foreign_keys=[issuer_id])
-        # refrec = relationship(
-        #     'RefRec', back_populates='doc', foreign_keys='refrec.doc_id')
-        # numrec = relationship(
-        #     'NumRec', back_populates='doc', foreign_keys='numrec.doc_id')
-        # personrec = relationship(
-        #     'PersonRec', back_populates='doc',
-        #     foreign_keys='personrec.doc_id')
+            'Person', uselist=False, foreign_keys=[doc.c.issuer_id])
+        ref_records = relationship(
+            'RefRec', back_populates='doc', foreign_keys=[refrec.c.doc_id])
+        num_records = relationship(
+            'NumRec', back_populates='doc', foreign_keys=[numrec.c.doc_id])
+        person_records = relationship(
+            'PersonRec',
+            back_populates='doc',
+            foreign_keys=[personrec.c.doc_id])
 
-    class VarMixin:
-        name = Column(Text, unique=True, nullable=False),
-
-        @declared_attr
-        def doctype_id(cls):
-            return Column(
-                domain.PK_TYPE, ForeignKey('doctype.id'), nullable=False)
-
-        @declared_attr
-        def doctype(cls):
-            return relationship(
-                'DocType',
-                uselist=False,
-                back_populates=cls.__tablename__,
-                foreign_keys=cls.__tablename__ + '.doctype_id')
-
-    class NumVar(Base, VarMixin, IdMixin):
-        __tablename__ = 'numvar'
-
-    class PersonVar(Base, VarMixin, IdMixin):
-        __tablename__ = 'personvar'
-
-    class RefVar(Base, VarMixin, IdMixin):
-        __tablename__ = 'refvar'
-        valuetype_id = Column(
-            'valuetype_id',
-            domain.PK_TYPE,
-            ForeignKey('doctype.id'),
-        )
+    class RefVar(domain.Base, StrMixin):
+        __table__ = refvar
         valuetype = relationship(
-            DocType,
-            uselist=False,
-            foreign_keys=__tablename__ + '.valuetype_id')
+            'DocType', uselist=False, foreign_keys=[refvar.c.valuetype_id])
+        doctype = relationship(
+            'DocType', uselist=False, foreign_keys=[refvar.c.doctype_id])
 
-    class RecMixin:
-        # adding an artificial id because of Eve
-
-        @declared_attr
-        def doc_id(cls):
-            doc_id = Column(
-                'doc_id', domain.PK_TYPE, ForeignKey('doc.id'), nullable=False)
-            return doc_id
-
-        @declared_attr
-        def doc(cls):
-            return relationship(
-                Doc,
-                uselist=False,
-                foreign_keys=cls.__tablename__ + '.doc_id',
-                back_populates=cls.__tablename__)
-
-    class NumRec(Base, RecMixin, IdMixin):
-        __tablename__ = 'numrec'
-        value = Column(domain.Numeric, nullable=False)
-        var_id = Column(
-            'var_id', domain.PK_TYPE, ForeignKey('numvar.id'), nullable=False)
+    class RefRec(domain.Base, StrMixin):
+        __table__ = referential_records
+        var_id = column_property(refrec.c.var_id, refvar.c.id)
         var = relationship(
-            NumVar,
+            'RefVar',
             uselist=False,
-            # back_populates='records',
-            foreign_keys='numrec.var_id',
+            foreign_keys=[refrec.c.var_id],
         )
-
-    class PersonRec(Base, RecMixin, IdMixin):
-        __tablename__ = 'personrec'
-        person_id = Column(
-            'person_id',
-            domain.PK_TYPE,
-            ForeignKey('person.id'),
-            nullable=False)
-        var_id = Column(
-            'var_id',
-            domain.PK_TYPE,
-            ForeignKey('personvar.id'),
-            nullable=False)
-        var = relationship(
-            PersonVar,
+        doc = relationship(
+            'Doc',
             uselist=False,
-            # back_populates='records',
-            foreign_keys='personrec.var_id',
-        )
+            foreign_keys=[refrec.c.doc_id],
+            back_populates='ref_records')
         value = relationship(
-            Person,
-            uselist=False,
-            foreign_keys='personrec.person_id',
-        )
+            'Doc', uselist=False, foreign_keys=[refrec.c.ref_id])
+        __mapper_args__ = {'primary_key': [refrec.c.id]}
 
-    class RefRec(Base, RecMixin, IdMixin):
-        __tablename__ = 'refrec'
-        ref_id = Column(
-            'ref_id', domain.PK_TYPE, ForeignKey('doc.id'), nullable=False)
-        var_id = Column(
-            'var_id', domain.PK_TYPE, ForeignKey('refvar.id'), nullable=False)
+    class NumVar(domain.Base, StrMixin):
+        __table__ = numvar
+        doctype = relationship(
+            'DocType', uselist=False, foreign_keys=[numvar.c.doctype_id])
+
+    class PersonVar(domain.Base, StrMixin):
+        __table__ = personvar
+        doctype = relationship(
+            'DocType', uselist=False, foreign_keys=[personvar.c.doctype_id])
+
+    class NumRec(domain.Base, StrMixin):
+        __table__ = numerical_records
+        var_id = column_property(numrec.c.var_id, numvar.c.id)
         var = relationship(
-            RefVar,
+            'NumVar',
             uselist=False,
-            foreign_keys='refrec.var_id',
+            # back_populates='records',
+            foreign_keys=[numrec.c.var_id],
         )
-        value = relationship(Doc, uselist=False, foreign_keys='refrec.ref_id')
+        doc = relationship(
+            'Doc',
+            uselist=False,
+            foreign_keys=[numrec.c.doc_id],
+            back_populates='num_records')
+        __mapper_args__ = {'primary_key': [numrec.c.id]}
+
+    class PersonRec(domain.Base, StrMixin):
+        __table__ = personrec
+        var_id = column_property(personrec.c.var_id, personvar.c.id)
+        var = relationship(
+            'PersonVar',
+            uselist=False,
+            # back_populates='records',
+            foreign_keys=[personrec.c.var_id],
+        )
+        doc = relationship(
+            'Doc',
+            uselist=False,
+            foreign_keys=[personrec.c.doc_id],
+            back_populates='person_records')
+        value = relationship(
+            'Person',
+            uselist=False,
+            foreign_keys=[personrec.c.person_id],
+        )
+        __mapper_args__ = {'primary_key': [personrec.c.id]}
 
     domain.add_model('Person', Person, Person.id)
     domain.add_model('Doc', Doc, Doc.id)
