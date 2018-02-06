@@ -20,12 +20,13 @@ def add_models(domain):
         Column('address', Text),
     )
 
-    class Person(domain.Base):
-        """Person data model (includes legal bodies)"""
-        __table__ = person
-
-        def __str__(self):
-            return '{} <{}>'.format(self.name, self.email)
+    role = Table(
+        'role',
+        meta,
+        *domain.common_columns(),
+        Column('id', domain.PK_TYPE, primary_key=True, unique=True),
+        Column('name', Text, nullable=False),
+    )
 
     class StrMixin:
         def __str__(self):
@@ -37,7 +38,8 @@ def add_models(domain):
     doctype = Table('doctype', meta, *domain.common_columns(),
                     Column(
                         'id', domain.PK_TYPE, primary_key=True, unique=True),
-                    Column('name', Text))
+                    Column('managed_by_role_id', domain.PK_TYPE,
+                           ForeignKey('role.id')), Column('name', Text))
     doc = Table('doc', meta, *domain.common_columns(),
                 Column('id', domain.PK_TYPE, primary_key=True, unique=True),
                 Column('name', Text, nullable=False),
@@ -93,10 +95,16 @@ def add_models(domain):
         *rec_columns('refvar.id'),
         Column('ref_id', domain.PK_TYPE, ForeignKey('doc.id'), nullable=False),
     )
-    numerical_records = select([numrec, numvar.c.doctype_id]).select_from(
-        join(numvar, numrec)).alias()
-    referential_records = select([refrec, refvar.c.doctype_id]).select_from(
-        join(refvar, refrec)).alias()
+
+    class Person(domain.Base):
+        """Person data model (includes legal bodies)"""
+        __table__ = person
+
+        def __str__(self):
+            return '{} <{}>'.format(self.name, self.email)
+
+    class Role(domain.Base, StrMixin):
+        __table__ = role
 
     class DocType(domain.Base, StrMixin):
         __table__ = doctype
@@ -113,6 +121,8 @@ def add_models(domain):
             'PersonVar',
             back_populates='doctype',
             foreign_keys=[personvar.c.doctype_id])
+        managed_by = relationship(
+            'Role', uselist=False, foreign_keys=[doctype.c.managed_by_role_id])
 
     class Doc(domain.Base, StrMixin):
         __table__ = doc
@@ -203,6 +213,7 @@ def add_models(domain):
         __mapper_args__ = {'primary_key': [personrec.c.id]}
 
     domain.add_model('Person', Person, Person.id)
+    domain.add_model('Role', Role, Role.id)
     domain.add_model('Doc', Doc, Doc.id)
     domain.add_model('DocType', DocType, DocType.id)
     domain.add_model('RefVar', RefVar, RefVar.id)
