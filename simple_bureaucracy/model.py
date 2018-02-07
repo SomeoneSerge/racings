@@ -30,9 +30,10 @@ def add_models(domain):
 
     class StrMixin:
         def __str__(self):
-            try:
-                name =self.name
-            except AttributeError:
+            # Tried try/except, wasn't working
+            if hasattr(self, 'name'):
+                name = self.name
+            else:
                 name = '{Missing representation}'
             return name
 
@@ -42,7 +43,8 @@ def add_models(domain):
         *domain.common_columns(),
         Column('id', domain.PK_TYPE, primary_key=True, unique=True),
         # Column('managed_by_role_id', domain.PK_TYPE,
-        #        ForeignKey('role.id')), Column('name', Text)
+        #        ForeignKey('role.id')),
+        Column('name', Text)
     )
     doc = Table('doc', meta, *domain.common_columns(),
                 Column('id', domain.PK_TYPE, primary_key=True, unique=True),
