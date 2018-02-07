@@ -87,3 +87,19 @@ configuration of several reusable packages.
 If (when) that comes, I'll only have to write database migration script. I'll
 still be able to supply the frontend with the very same metadata (variable
 names, etc). It's just that this data would be statically composed too.
+
+## Temporarily, Mongo
+
+As I've mentioned we could've achieved the same and more w MongoDB. So let's use
+it until I finally figure out a proper way to model data. Btw that could take
+quite long given that the entire world still hasn't even approached anything
+that I'd call a solution. Yeah, the world's going in the wrong direction. Look,
+they call mongo non-relational database, but well they've just dropped schema in
+order to make higher-order logic possible. That doesn't mean it's
+non-fucking-relational. Anyways. I'll set up a mongo plus eve in a few minutes.
+
+Oh, and on why. Eve's bad at eager loading. So it'd just yield Variable ids in
+Doctypes and record ids in Doc. And flask-restless is shitcoded and expects sqla
+model to have a `__tablename__`. And SQLA is culpable too --- it doesn't allow
+to set tablename together with table. If tablename's set, it apparently doesn't
+search for table and then finds no fields (smth like that, hadn't checked). Ugh
