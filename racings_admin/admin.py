@@ -63,10 +63,10 @@ def filldb():
             DOMAIN.PersonVar(name='issuer')
         ])
     homologations = DOMAIN.DocType(
-        name='homologation',)
-    homologations = DOMAIN.DocType(
+        name='Homologation',)
+    seals = DOMAIN.DocType(
         name='Seal',)
-    session.add_all([superuser, scrutineers, drivers, homologations])
+    session.add_all([superuser, scrutineers, drivers, seals, homologations])
     session.commit()
 
 
