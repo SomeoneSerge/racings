@@ -103,3 +103,21 @@ Doctypes and record ids in Doc. And flask-restless is shitcoded and expects sqla
 model to have a `__tablename__`. And SQLA is culpable too --- it doesn't allow
 to set tablename together with table. If tablename's set, it apparently doesn't
 search for table and then finds no fields (smth like that, hadn't checked). Ugh
+
+## Modularity w eve and mongo
+
+The models are described as Cerberus
+[Cerberus](https://github.com/pyeve/cerberus) schema (a plain data! a simple dict!)
+and fed to [Eve](https://github.com/pyeve/eve).
+
+The way we build these models is we use immutable maps from `pyrsistent` and
+write model in reusable immutable pieces, which are then "added" up into a huge
+model. Unfortunately I have to convert this map into a mutable python dictionary
+so that Eve can use it. Perhaps I'll see later if I can eliminate the
+assignments from Eve's code and push the changes upstream. That'd be great. At
+the moment though it doesn't matter since it's only converted once at startup.
+
+The actual backend resides in [`./racings_app/`](./racings_app/)
+and does basically nothing. It imports a model and runs Eve. That's all.
+
+Now I can finally move to the front side.

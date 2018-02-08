@@ -29,7 +29,7 @@ def run(ctx):
 def print_schema():
     from racings_app import settings
     import pprint
-    pprint.pprint(settings.DOMAIN)
+    pprint.pprint(DOMAIN)
 
 
 if __name__ == '__main__':
