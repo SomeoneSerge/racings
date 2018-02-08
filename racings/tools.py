@@ -19,7 +19,7 @@ def pyrsistent_to_mutable(x):
     if is_dict(x):
         return {k: pyrsistent_to_mutable(x[k]) for k in x}
     if is_set(x):
-        return {pyrsistent_to_mutable(y) for y in x}
+        return [pyrsistent_to_mutable(y) for y in x]
     if is_list(x):
         return [pyrsistent_to_mutable(y) for y in x]
     return x

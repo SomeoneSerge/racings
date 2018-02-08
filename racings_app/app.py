@@ -1,8 +1,19 @@
 from racings import tools
 from racings.domain import DOMAIN
 from eve import Eve
+import json
 from pymongo import MongoClient
 import click
+from racings_app.front import blueprint as racings_blueprint
+SIMPLE_TYPES = ['string',
+                'boolean',
+                'integer',
+                'float',
+                'number',
+                'objectid']
+
+# Front part
+from flask import render_template
 
 DOMAIN = tools.pyrsistent_to_mutable(DOMAIN)
 
@@ -22,6 +33,7 @@ def cli(ctx, debug, mongo_host, mongo_port, mongo_user, mongo_pass, mongo_db):
         MONGO_PORT=mongo_port,
         MONGO_DBNAME=mongo_db,
         DOMAIN=DOMAIN,
+        URL_PREFIX='api',
         RESOURCE_METHODS=['GET', 'POST', 'DELETE'],
         ITEM_METHODS=['GET', 'PATCH', 'DELETE'])
     if mongo_user is not None and mongo_user != '':
@@ -34,6 +46,19 @@ def cli(ctx, debug, mongo_host, mongo_port, mongo_user, mongo_pass, mongo_db):
 @click.pass_context
 def run(ctx):
     app = Eve(settings=ctx.obj)
+    app.config['template_folder'] = 'templates'
+    app.register_blueprint(racings_blueprint)
+    @app.route('/schema')
+    def show_schema():
+        print('test')
+        return json.dumps(ctx.obj['DOMAIN'])
+    # Just for example
+    @app.route('/ko_item/<collection>/<_id>')
+    def show(collection, _id):
+        return render_template('ko_item.html',
+                               _id=_id,
+                               collection=ctx.obj['DOMAIN'][collection],
+                               SIMPLE_TYPES=SIMPLE_TYPES)
     app.run()
 
 

@@ -1,0 +1,29 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="item-{{ collection['item_name'] }}">
+    {% for f, t in collection['schema'].items() recursive %}
+    <div class="type-{{ t['type'] }} var-{{ f }}">
+        {% if t['type'] in SIMPLE_TYPES %}
+        <span data-bind="text: {{ f }}"></span>
+        {% else %}
+        {{ loop(t['schema']) }}
+        {% endif %}
+    </div>
+    {% endfor %}
+</section>
+<script type="text/javascript" >
+     var viewModel = {
+         {% for f, t in collection['schema'].items() recursive %}
+             {% if 'schema' in t %}
+             {{ loop(t['schema']) }}
+             {% else %}
+             {{ f }}: ko.observable(),
+             {% endif %}
+         {% endfor %}
+     }
+     $.getJSON('/api/{{ collection["url"] }}/{{ _id }}', function(data) {
+         ko.applyBindings(data);
+     });
+</script>
+
+{% endblock %}
