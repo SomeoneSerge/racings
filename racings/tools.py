@@ -1,4 +1,4 @@
-from pyrsistent import PSet
+from pyrsistent import PSet, PVector
 
 
 def is_dict(x):
@@ -6,7 +6,9 @@ def is_dict(x):
 
 
 def is_list(x):
-    return isinstance(PSet, tuple) or isinstance(PSet, list)
+    return (isinstance(x, tuple)
+            or isinstance(x, list)
+            or isinstance(x, PVector))
 
 
 def is_set(x):

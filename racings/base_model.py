@@ -14,7 +14,7 @@ _T_NAME = m(
     maxlength=512,
 )
 
-_T_REF = m(name=_T_NAME, ref=t('dbref'))
+_T_REF = t('dbref')
 _T_PAST_DATE = m(type='integer', min=1800, max=date.today().year)
 
 # Fancy-named legal bodies.
